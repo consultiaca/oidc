@@ -1,0 +1,22 @@
+name: Deploy static HTML to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-latest # Or you can try ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'oidc' # Replace with your App Service name
+          slot-name: 'Production'
+          package: . # Deploy the entire repository
