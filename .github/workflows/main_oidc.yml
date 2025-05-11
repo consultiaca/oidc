@@ -13,27 +13,35 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET Core
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
+          dotnet-version: '8.0' # Use a supported .NET version
+
+      - name: Restore dependencies
+        run: dotnet restore YourProjectName.csproj # Specify the project file
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build YourProjectName.csproj --configuration Release # Specify the project file
+
+      - name: Test
+        run: dotnet test YourProjectName.csproj --configuration Release # Specify the project file
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish YourProjectName.csproj -c Release -o ./deploy # Use a relative output path
+        env:
+          DOTNET_ROOT: !!null #remove this line
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ./deploy
 
   deploy:
     runs-on: windows-latest
@@ -42,15 +50,15 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -64,5 +72,14 @@ jobs:
         with:
           app-name: 'oidc'
           slot-name: 'Production'
-          package: .
-          
+          package: ./deploy # Deploy from the artifact directory
+
+      - name: Azure App Service settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: 'oidc'
+          slot-name: 'Production'
+          app-settings-json: |
+            [
+              {"name": "ASPNETCORE_ENVIRONMENT", "value": "Production", "slotSetting": false}
+            ]
