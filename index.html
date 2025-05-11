@@ -103,7 +103,7 @@
             redirect_uri: "http://localhost:3000/index.html", // Or your actual redirect URI
             response_type: "code", // Use "code" for the Authorization Code Flow
             scope: "openid profile email", // Include the scopes you need
-            post_logout_redirect_uri: "http://localhost:3000/index.html", //  Ensure this is set
+            post_logout_redirect_uri: "https://oidc-d9f3e5g2dwfphcgk.canadacentral-01.azurewebsites.net/index.html", //  Ensure this is set
             client_secret: "uhr9XQObbj", // Add the client secret here
         };
         const userManager = new Oidc.UserManager(config);
