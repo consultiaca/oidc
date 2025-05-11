@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIDC Example with IBM Verify</title>
+    <script src="https://cdn.jsdelivr.net/npm/oidc-client@1.11.0/dist/oidc-client.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 50px;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #0078d7;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #0078d7;
+            color: #ffffff;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #login-info {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            overflow-wrap: break-word;
+        }
+
+        #login-info h2 {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        #login-info pre {
+            font-family: monospace;
+            font-size: 12px;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #222;
+        }
+
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OIDC Login with IBM Verify</h1>
+        <button id="login-button">Login with IBM Verify</button>
+        <button id="logout-button" style="display: none;">Logout</button>
+        <div id="login-info" style="display: none;">
+            <h2>Login Information (ID Token)</h2>
+            <pre id="id-token-info"></pre>
+        </div>
+        <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+    </div>
+    <script>
+        const config = {
+            authority: "https://consultia.verify.ibm.com", // Replace with your IBM Verify tenant URL
+            client_id: "4721b826-2a57-424e-ab06-2422a239cbae", // Replace with your IBM Verify Client ID
+            redirect_uri: "http://localhost:3000/index.html", // Or your actual redirect URI
+            response_type: "code", // Use "code" for the Authorization Code Flow
+            scope: "openid profile email", // Include the scopes you need
+            post_logout_redirect_uri: "http://localhost:3000/index.html", //  Ensure this is set
+            client_secret: "uhr9XQObbj", // Add the client secret here
+        };
+        const userManager = new Oidc.UserManager(config);
+        const loginButton = document.getElementById("login-button");
+        const logoutButton = document.getElementById("logout-button");
+        const loginInfoDiv = document.getElementById("login-info");
+        const idTokenInfoPre = document.getElementById("id-token-info");
+        const errorMessageDiv = document.getElementById("error-message");
+
+        function showError(message) {
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.style.display = "block";
+        }
+
+        function clearError() {
+            errorMessageDiv.style.display = "none";
+            errorMessageDiv.textContent = "";
+        }
+
+        function displayUserInfo(user) {
+            loginButton.style.display = "none";
+            logoutButton.style.display = "block";
+            loginInfoDiv.style.display = "block";
+            idTokenInfoPre.textContent = JSON.stringify(user.id_token_claims, null, 2);
+        }
+
+        loginButton.addEventListener("click", () => {
+            clearError();
+            userManager.signinRedirect().then(() => {
+                console.log("signinRedirect successful");
+            }).catch((err) => {
+                console.error("Login redirect error:", err);
+                showError("Error during login redirect. Check console for details.");
+            });
+        });
+
+        logoutButton.addEventListener("click", () => {
+            userManager.signoutRedirect().then(() => {
+                console.log("signoutRedirect successful");
+                loginButton.style.display = "block";
+                logoutButton.style.display = "none";
+                loginInfoDiv.style.display = "none";
+                idTokenInfoPre.textContent = "";
+            }).catch((err) => {
+                console.error("Logout redirect error:", err);
+                showError("Error during logout. Check console for details.");
+            });
+        });
+
+        userManager.getUser().then((user) => {
+            if (user) {
+                console.log("User is already signed in", user);
+                displayUserInfo(user);
+            } else {
+                console.log("User is not signed in");
+                loginButton.style.display = "block";
+                logoutButton.style.display = "none";
+                loginInfoDiv.style.display = "none";
+            }
+        }).catch((err) => {
+            console.error("Error checking user session:", err);
+            showError("Error checking login status. Check console for details.");
+        });
+
+        // Handle the callback after authentication.
+        if (window.location.href.includes("code=")) {
+            userManager.signinCallback().then((user) => {
+                console.log("signinCallback", user);
+                displayUserInfo(user);
+            }).catch((error) => {
+                console.error("signinCallback error", error);
+                showError("Failed to complete sign-in process. Check console for details.");
+            });
+        }
+    </script>
+</body>
+</html>
